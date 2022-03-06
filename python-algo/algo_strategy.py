@@ -67,19 +67,33 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Now build reactive defenses based on where the enemy scored
         self.build_reactive_defense(game_state)
 
-        # If the turn is less than 5, stall with interceptors and wait to see enemy's base
-        if game_state.turn_number < 8:
+        # If the turn is less than 4, stall with interceptors and wait to see enemy's base
+        if game_state.turn_number < 4:
+            scout_spawn_location_options = [[3, 10], [24, 10], [5, 8], [22, 8], [7, 6], [20, 6], [9, 4], [18, 4], [11, 2], [16, 2], [13, 0], [14, 0]]
+            best_location = self.least_damage_spawn_location(game_state, scout_spawn_location_options)
+            game_state.attempt_spawn(SCOUT, best_location, game_state.number_affordable(SCOUT) - 1)
             self.stall_with_interceptors_1(game_state)
             # Put Attack Strategy Here for first few rounds
         else:
             #TODO: Put Attack Strategy Here
+            if self.detect_enemy_unit(game_state, unit_type=None, valid_x=None, valid_y=[14, 15]) > 10:
+                self.demolisher_line_strategy(game_state)
             # Only spawn Scouts every other turn
             # Sending more at once is better since attacks can only hit a single scout at a time
+            if self.detect_enemy_unit(game_state, unit_type=None, valid_x=range(17,23), valid_y=range(16,20)) > 10:
+                demolisher_spawn_location_options= [[3, 10], [24, 10], [5, 8], [22, 8], [7, 6], [20, 6], [9, 4], [18, 4], [11, 2], [16, 2], [13, 0], [14, 0]]
+                best_location = self.least_damage_spawn_location(game_state, demolisher_spawn_location_options)
+                game_state.attempt_spawn(DEMOLISHER, best_location, game_state.number_affordable(SCOUT) - 1)
             if game_state.turn_number % 2 == 1:
+                # send out two interceptors to help clear our openings every other turn (counters other basic algos)
+                self.stall_with_interceptors_1
                 # To simplify we will just check sending them from back left and right
-                scout_spawn_location_options = [[13, 0], [14, 0]]
+                scout_spawn_location_options = [[3, 10], [24, 10], [5, 8], [22, 8], [7, 6], [20, 6], [9, 4], [18, 4], [11, 2], [16, 2], [13, 0], [14, 0]]
                 best_location = self.least_damage_spawn_location(game_state, scout_spawn_location_options)
                 game_state.attempt_spawn(SCOUT, best_location, 1000)
+
+            support_locations = [[8, 9], [20, 9], [10, 7], [17, 7]]
+            game_state.attempt_spawn(SUPPORT, support_locations)
 
 
     """
@@ -113,7 +127,6 @@ class AlgoStrategy(gamelib.AlgoCore):
                 # Only spawn Scouts every other turn
                 # Sending more at once is better since attacks can only hit a single scout at a time
                 if game_state.turn_number % 2 == 1:
-                    # To simplify we will just check sending them from back left and right
                     scout_spawn_location_options = [[13, 0], [14, 0]]
                     best_location = self.least_damage_spawn_location(game_state, scout_spawn_location_options)
                     game_state.attempt_spawn(SCOUT, best_location, 1000)
@@ -236,7 +249,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         Send out interceptors at random locations to defend our base from enemy moving units.
         """
         # Float two interceptors down the middle
-        interceptor_locations = [[6, 7], [21, 7]]
+        interceptor_locations = [[7,6], [20, 6]]
         game_state.attempt_spawn(INTERCEPTOR, interceptor_locations)
         #TODO: Optimize for when we think enemy will attack.
         # After the initial rounds try to only send out interceptors when we think they will attack
@@ -261,7 +274,7 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Now spawn demolishers next to the line
         # By asking attempt_spawn to spawn 1000 units, it will essentially spawn as many as we have resources for
-        game_state.attempt_spawn(DEMOLISHER, [24, 10], 1000)
+        game_state.attempt_spawn(DEMOLISHER, [24, 10], 4)
 
     def least_damage_spawn_location(self, game_state, location_options):
         """
@@ -281,6 +294,23 @@ class AlgoStrategy(gamelib.AlgoCore):
 
         # Now just return the location that takes the least damage
         return location_options[damages.index(min(damages))]
+
+    def most_damage_spawn_location(self, game_state, location_options):
+        damages = []
+        # Get the damage estimate each path will take
+        for location in location_options:
+            path = game_state.find_path_to_edge(location)
+            damage = 0
+            for path_location in path:
+                # Get number of enemy turrets that can attack each location and multiply by turret damage
+                if game_state.contains_stationary_unit(location):
+                    for unit in game_state.game_map[location]:
+                        if unit.player_index == 1:
+                            damage+= 1
+            damages.append(damage)
+
+        # Now just return the location that takes the least damage
+        return location_options[damages.index(max(damages))]
 
     def detect_enemy_unit(self, game_state, unit_type=None, valid_x = None, valid_y = None):
         total_units = 0
