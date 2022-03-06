@@ -80,7 +80,7 @@ class AlgoStrategy(gamelib.AlgoCore):
                 self.demolisher_line_strategy(game_state)
             # Only spawn Scouts every other turn
             # Sending more at once is better since attacks can only hit a single scout at a time
-            if self.detect_enemy_unit(game_state, unit_type=None, valid_x=range(17,23), valid_y=range(16,20)) > 10:
+            if self.detect_enemy_unit(game_state, unit_type=None, valid_x=list(range(17,23)), valid_y=list(range(16,20))) > 10:
                 demolisher_spawn_location_options= [[3, 10], [24, 10], [5, 8], [22, 8], [7, 6], [20, 6], [9, 4], [18, 4], [11, 2], [16, 2], [13, 0], [14, 0]]
                 best_location = self.least_damage_spawn_location(game_state, demolisher_spawn_location_options)
                 game_state.attempt_spawn(DEMOLISHER, best_location, game_state.number_affordable(SCOUT) - 1)
